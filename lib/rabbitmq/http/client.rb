@@ -99,6 +99,8 @@ module RabbitMQ
       def channel_info(name)
         decode_resource(@connection.get("/api/channels/#{uri_encode(name)}"))
       end
+      
+      
 
       def list_exchanges(vhost = nil)
         path = if vhost.nil?
@@ -113,6 +115,18 @@ module RabbitMQ
       def exchange_info(vhost, name)
         decode_resource(@connection.get("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(name)}"))
       end
+      
+      def create_exchange(vhost, name, attributes)
+        response = @connection.put("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(name)}") do |req|
+          req.headers['Content-Type'] = "application/json"
+          req.body = MultiJson.dump(attributes)
+        end
+        decode_resource(response)
+      end      
+
+      def delete_exchange(vhost, name)
+        decode_resource(@connection.delete("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(name)}"))
+      end
 
       def list_bindings_by_source(vhost, exchange)
         decode_resource_collection(@connection.get("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(exchange)}/bindings/source"))
@@ -121,6 +135,16 @@ module RabbitMQ
       def list_bindings_by_destination(vhost, exchange)
         decode_resource_collection(@connection.get("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(exchange)}/bindings/destination"))
       end
+      
+      def publish_message(vhost, name, attributes)
+        response = @connection.post("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(name)}/publish") do |req|
+          req.headers['Content-Type'] = "application/json"
+          req.body = MultiJson.dump(attributes)
+        end
+        decode_resource(response)
+      end
+      
+      
 
       def list_queues(vhost = nil)
         path = if vhost.nil?
@@ -156,6 +180,14 @@ module RabbitMQ
         decode_resource(@connection.delete("/api/queues/#{uri_encode(vhost)}/#{uri_encode(name)}/contents"))
       end
 
+      def queue_action(vhost, name, action)
+        response = @connection.post("/api/queues/#{uri_encode(vhost)}/#{uri_encode(name)}/actions") do |req|
+          req.headers['Content-Type'] = "application/json"
+          req.body = MultiJson.dump(action)
+        end
+        decode_resource_collection(response) unless response.body.nil?
+      end
+      
       def get_messages(vhost, name, options)
         response = @connection.post("/api/queues/#{uri_encode(vhost)}/#{uri_encode(name)}/get") do |req|
           req.headers['Content-Type'] = "application/json"
@@ -163,6 +195,7 @@ module RabbitMQ
         end
         decode_resource_collection(response)
       end
+
 
 
       def list_bindings(vhost = nil)
@@ -194,8 +227,31 @@ module RabbitMQ
       def delete_queue_binding(vhost, queue, exchange, properties_key)
         resp = @connection.delete("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(exchange)}/q/#{uri_encode(queue)}/#{uri_encode(properties_key)}")
         resp.success?
+      end      
+
+
+
+      def list_bindings_between_exchange_and_exchange(vhost, source_exchange, destination_exchange)
+        decode_resource_collection(@connection.get("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(source_exchange)}/e/#{uri_encode(destination_exchange)}"))
       end
 
+      def exchange_binding_info(vhost, source_exchange, destination_exchange, properties_key)
+        decode_resource(@connection.get("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(source_exchange)}/e/#{uri_encode(destination_exchange)}/#{uri_encode(properties_key)}"))
+      end
+      
+      def bind_exchange(vhost, source_exchange, destination_exchange, routing_key, arguments = [])
+        resp = @connection.post("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(source_exchange)}/e/#{uri_encode(destination_exchange)}") do |req|
+          req.headers['Content-Type'] = 'application/json'
+          req.body = MultiJson.dump({ routing_key: routing_key, arguments: arguments })
+        end
+        resp.headers['location']
+      end
+      
+      def delete_exchange_binding(vhost, source_exchange, destination_exchange, properties_key)
+        resp = @connection.delete("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(source_exchange)}/e/#{uri_encode(destination_exchange)}/#{uri_encode(properties_key)}")
+        resp.success?
+      end
+            
 
 
       def list_vhosts
