@@ -56,7 +56,7 @@ module RabbitMQ
       #
       # @return [Hash<String, Integer>] Hash of protocol => port
       def protocol_ports
-        self.overview.listeners.
+        (self.overview.listeners || []).
           reduce(Hash.new) { |acc, lnr| acc[lnr.protocol] = lnr.port; acc }
       end
 
@@ -110,6 +110,25 @@ module RabbitMQ
                end
 
         decode_resource_collection(@connection.get(path))
+      end
+
+      def declare_exchange(vhost, name, attributes = {})
+        opts = {
+          :type => "direct",
+          :auto_delete => false,
+          :durable => true,
+          :arguments => {}
+        }.merge(attributes)
+
+        response = @connection.put("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(name)}") do |req|
+          req.headers['Content-Type'] = 'application/json'
+          req.body = MultiJson.dump(opts)
+        end
+        decode_resource(response)
+      end
+
+      def delete_exchange(vhost, name)
+        decode_resource(@connection.delete("/api/exchanges/#{uri_encode(vhost)}/#{uri_encode(name)}"))
       end
 
       def exchange_info(vhost, name)
@@ -177,7 +196,8 @@ module RabbitMQ
       end
 
       def purge_queue(vhost, name)
-        decode_resource(@connection.delete("/api/queues/#{uri_encode(vhost)}/#{uri_encode(name)}/contents"))
+        @connection.delete("/api/queues/#{uri_encode(vhost)}/#{uri_encode(name)}/contents")
+        Hashie::Mash.new
       end
 
       def queue_action(vhost, name, action)
@@ -196,8 +216,6 @@ module RabbitMQ
         decode_resource_collection(response)
       end
 
-
-
       def list_bindings(vhost = nil)
         path = if vhost.nil?
                  "/api/bindings"
@@ -215,15 +233,15 @@ module RabbitMQ
       def queue_binding_info(vhost, queue, exchange, properties_key)
         decode_resource(@connection.get("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(exchange)}/q/#{uri_encode(queue)}/#{uri_encode(properties_key)}"))
       end
-      
+
       def bind_queue(vhost, queue, exchange, routing_key, arguments = [])
         resp = @connection.post("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(exchange)}/q/#{uri_encode(queue)}") do |req|
           req.headers['Content-Type'] = 'application/json'
-          req.body = MultiJson.dump({ routing_key: routing_key, arguments: arguments })
+          req.body = MultiJson.dump({:routing_key => routing_key, :arguments => arguments})
         end
         resp.headers['location']
       end
-      
+
       def delete_queue_binding(vhost, queue, exchange, properties_key)
         resp = @connection.delete("/api/bindings/#{uri_encode(vhost)}/e/#{uri_encode(exchange)}/q/#{uri_encode(queue)}/#{uri_encode(properties_key)}")
         resp.success?
@@ -411,10 +429,10 @@ module RabbitMQ
       def initialize_connection(endpoint, options = {})
         uri     = URI.parse(endpoint)
 
-        user     = uri.user     || options[:username] || "guest"
-        password = uri.password || options[:password] || "guest"
+        user     = uri.user     || options.delete(:username) || "guest"
+        password = uri.password || options.delete(:password) || "guest"
 
-        @connection = Faraday.new(options.merge(:url => endpoint)) do |conn|
+        @connection = Faraday.new(endpoint, options) do |conn|
           conn.basic_auth user, password
           conn.use        FaradayMiddleware::FollowRedirects, :limit => 3
           conn.use        Faraday::Response::RaiseError

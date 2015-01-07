@@ -269,9 +269,50 @@ describe RabbitMQ::HTTP::Client do
     end
   end
 
+  describe "PUT /api/exchanges/:vhost/:name" do
+    before :all do
+      @channel    = @connection.create_channel
+    end
+
+    after :all do
+      @channel.close
+    end
+
+    let(:exchange_name) { "httpdeclared" }
+
+    it "declares an exchange" do
+      subject.declare_exchange("/", exchange_name, :durable => false, :type => "fanout")
+
+      x = @channel.fanout(exchange_name, :durable => false, :auto_delete => false)
+      x.delete
+    end
+  end
+
+  describe "DELETE /api/exchanges/:vhost/:name" do
+    before :all do
+      @channel    = @connection.create_channel
+    end
+
+    after :all do
+      @channel.close
+    end
+
+    let(:exchange_name) { "httpdeclared" }
+
+    it "deletes an exchange" do
+      x = @channel.fanout(exchange_name, :durable => false)
+      subject.delete_exchange("/", exchange_name)
+    end
+  end
+
+
   describe "GET /api/exchanges/:vhost/:name/bindings/source" do
     before :all do
       @channel    = @connection.create_channel
+    end
+
+    after :all do
+      @channel.close
     end
 
     it "returns a list of all bindings in which the given exchange is the source" do
@@ -714,10 +755,10 @@ describe RabbitMQ::HTTP::Client do
 
   describe "PUT /api/users/:name" do
     it "updates information about a user" do
-      subject.update_user("alt", :tags => "http policymaker management", :password => "alt")
+      subject.update_user("alt", :tags => "http, policymaker, management", :password => "alt")
 
       u = subject.user_info("alt")
-      u.tags.should == "http policymaker management"
+      u.tags.should == "http,policymaker,management"
     end
   end
 

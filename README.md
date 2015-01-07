@@ -37,7 +37,7 @@ All versions require [RabbitMQ Management UI plugin](http://www.rabbitmq.com/man
 
 Add this line to your application's Gemfile:
 
-    gem 'rabbitmq_http_api_client'
+    gem 'rabbitmq_http_api_client', '>= 1.3.0'
 
 And then execute:
 
@@ -306,7 +306,7 @@ puts u.password_hash
 puts u.tags
 
 # Update information about a user
-client.update_user("myapp", :tags => "services", :password => "t0ps3krEt")
+client.update_user("myapp", :tags => "services,policymaker,management", :password => "t0ps3krEt")
 
 # Delete a user
 client.delete_user("myapp")

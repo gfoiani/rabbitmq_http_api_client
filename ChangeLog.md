@@ -1,3 +1,63 @@
+## Changes Between 1.3.0 and 1.4.0
+
+### Protocol Ports for Non-Administrators
+
+`Client#protocol_ports` no longer fails with a nil pointer exception
+for non-administrators.
+
+### Hashi Upgrade
+
+The library now depends on `hashie ~> 3.2`.
+
+Contributed by Damon Morgan.
+
+### MultiJSON Upgrade
+
+The library now depends on `multi_json ~> 1.9`.
+
+Contributed by Damon Morgan.
+
+
+## Changes Between 1.2.0 and 1.3.0
+
+### Faraday Upgrade
+
+The project now depends on Faraday `0.9.x`.
+
+Contributed by John Murphy.
+
+### Exchange Deletion
+
+`RabbitMQ::HTTP::Client#delete_exchange` is a new function that deletes exchanges:
+
+``` ruby
+c.delete_exchange("/", "an.exchange")
+```
+
+Contributed by Matt Bostock.
+
+
+## Changes Between 1.1.0 and 1.2.0
+
+### Ruby 1.8 Compatibility Restored
+
+The library no longer uses 1.9-specific hash syntax.
+
+
+
+## Changes Between 1.0.0 and 1.1.0
+
+### declare_exchange
+
+It is now possible to declare an exchange over HTTP API using `RabbitMQ::HTTP::Client#declare_exchange`:
+
+``` ruby
+c.declare_exchange("/", exchange_name, :durable => false, :type => "fanout")
+```
+
+Contributed by Jake Davis (Simple).
+
+
 ## Changes Between 0.9.0 and 1.0.0
 
 ### Hashi Upgrade
